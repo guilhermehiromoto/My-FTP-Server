@@ -6,7 +6,7 @@
 #include <string.h>
 #include<pthread.h>
 
-#define PORT 1337
+#define PORT 7331
 #define PACKET_SIZE 10
 #define FILENAME_SIZE 30
 
@@ -19,13 +19,13 @@ void send_file(FILE* fp, int client_socket){
 	while (fgets(buffer, PACKET_SIZE, fp) != NULL){
 		printf("|%s|\n", buffer);
     	write(client_socket , buffer , PACKET_SIZE);
-  	}
-
-  	fclose(fp);
+  }
+	write(client_socket , buffer , 1);
+  fclose(fp);
 }
 
 void* communation_thread(void *client_sock){
-	
+
 	// Voltando o socker descriptor do cliente para inteiro
     int client_socket = *(int*)client_sock;
 	char filename[FILENAME_SIZE];
@@ -61,15 +61,15 @@ int main(){
 	socket_address address;
 	int server_fd, client_socket, addrlen = sizeof(address);
 
-	// Socket descriptor, inteiro que a aplicação usa sempre que quer se referir a este socket	
+	// Socket descriptor, inteiro que a aplicação usa sempre que quer se referir a este socket
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
 	// AF_INET: IPv4
 	// INADDR_ANY: Para todas as interfaces de rede disponíveis
 	// PORT: 1337
-	address.sin_family = AF_INET; 
-	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK); 
-	address.sin_port = htons(PORT); 
+	address.sin_family = AF_INET;
+	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	address.sin_port = htons(PORT);
 
 	// Vincula o socket ao localhost e a porta 1337
 	bind(server_fd,(const struct sockaddr *)&address,sizeof(address));
@@ -79,7 +79,7 @@ int main(){
 	listen(server_fd, 10);
 	pthread_t thread_id;
 	printf("\n----- Esperando Conexão -----\n");
-	
+
 	while(1){
 
 		// Retira a primeira requisição da fila, cria um novo socket e retorna um novo socket descriptor (new_socket)
@@ -92,4 +92,3 @@ int main(){
 
 	return 0;
 }
-

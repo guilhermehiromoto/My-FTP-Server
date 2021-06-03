@@ -6,17 +6,18 @@
 #include <string.h>
 
 #define PORT 7331
-#define PACKET_SIZE 1024
+#define PACKET_SIZE 10
 
 typedef struct sockaddr_in socket_address;
 
-int write_file(FILE* fp , char* buffer_in){
+int write_file(FILE* fp , char* buffer_in, int pkt_size){
   int i = 0;
-  //while(buffer_in[i] != '\0'){
+  while(buffer_in[i] != '\0'){
     printf("%c", buffer_in[i]);
-    fwrite(&(buffer_in[i]),PACKET_SIZE,1,fp);
     i++;
-  //}
+  }
+  printf("\n");
+    fwrite(buffer_in,1,pkt_size-1,fp);
 }
 
 int main(){
@@ -51,9 +52,16 @@ int main(){
             printf("\n----- Conexão encerrada -----\n");
             break;
         }
-        while(read(client_fd , buffer_in, PACKET_SIZE)){
-            write_file(fp, buffer_in);
+        int packet_count = 0;
+        int pkt_size;
+        while(1){
+            pkt_size=read(client_fd , buffer_in, PACKET_SIZE);
+            printf("%d - %d>", pkt_size, packet_count++);
+            if(pkt_size < 2) break;
+
+            write_file(fp, buffer_in, pkt_size);
         }
+        printf("---------\n");
         fclose(fp);
     }
 
