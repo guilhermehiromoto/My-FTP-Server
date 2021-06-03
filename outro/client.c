@@ -5,25 +5,27 @@
 #include <netinet/in.h>
 #include <string.h>
 
-#define PORT 7331
-#define PACKET_SIZE 1024
+#define PORT 1337
+#define PACKET_SIZE 10
 
 typedef struct sockaddr_in socket_address;
 
-int write_file(FILE* fp , char* buffer_in){
+void write_file(FILE* fp , char* buffer_in){
     int i = 0;
     while(buffer_in[i] != '\0'){
-        printf("%c", buffer_in[i]);
+        printf("|%c|", buffer_in[i]);
         //fwrite(&(buffer_in[i]),1,1,fp);
         i++;
     }
+    printf("algumacoisa");
+    //printf("\n");
+    //getchar();
 }
 
 int main(){
     socket_address address;
     int client_fd, addrlen = sizeof(address);
-    int counter = 0;
-    FILE* fp;
+    //FILE* fp;
 
 
     // Socket descriptor, inteiro que a aplicação usa sempre que quer se referir a este socket  
@@ -38,23 +40,30 @@ int main(){
 
     connect(client_fd, (const struct sockaddr *)&address, addrlen);
     printf("\n----- Conexão Estabelecida -----\n");
+
     char filename[30];
-    char buffer_in[30];
+    memset(filename, 0, 30);
+    char buffer_in[PACKET_SIZE];
+    memset(buffer_in, 0, PACKET_SIZE);
+
     // Le o input do cliente até serem enviados 0 bytes
     while(1){    // Change
-        scanf("%[^\n]%*c", filename);
-        fp = fopen(filename, "wb");
+        scanf(" %[^\n]%*c", filename);
+        //fp = fopen(filename, "wb");
 
         write(client_fd , filename, 30);
-        printf("|%s|\n", filename);
+
         if (!strcmp(filename, "sair")){
             printf("\n----- Conexão encerrada -----\n");
             break;
         }
-        while(read(client_fd , buffer_in, PACKET_SIZE)){
-            write_file(fp, buffer_in);
+        while(read(client_fd , buffer_in, PACKET_SIZE) > 0){
+            //write_file(fp, buffer_in);
+            printf("|%s|", buffer_in);
+            //break;
         }
-        fclose(fp);
+
+        //fclose(fp);
     }
 
     close(client_fd);

@@ -6,23 +6,51 @@
 #include <string.h>
 #include<pthread.h>
 
-#define PORT 7331
+#define PORT 1337
+#define PACKET_SIZE 10
+#define FILENAME_SIZE 30
 
 typedef struct sockaddr_in socket_address;
+
+void send_file(FILE* fp, int client_socket){
+	char buffer[PACKET_SIZE+1];
+	memset(buffer, 0, PACKET_SIZE+1);
+
+	while (fgets(buffer, PACKET_SIZE, fp) != NULL){
+		printf("|%s|\n", buffer);
+    	write(client_socket , buffer , PACKET_SIZE);
+  	}
+
+  	fclose(fp);
+}
 
 void* communation_thread(void *client_sock){
 	
 	// Voltando o socker descriptor do cliente para inteiro
     int client_socket = *(int*)client_sock;
-	char buffer[30000] = {0};
+	char filename[FILENAME_SIZE];
+	memset(filename, 0, FILENAME_SIZE);
+
+	FILE* fp;
 
 	// Le o input do cliente até serem enviados 0 bytes
-	while(read(client_socket , buffer, 30000)){
-		printf("%s\n",buffer );
+	while(read(client_socket , filename, FILENAME_SIZE)){
 
-		// Escreve para o cliente
-		char hello[30] = "Mensagem Recebida\n\n";
-		write(client_socket , hello , strlen(hello));
+		if(!strcmp(filename, "sair")){
+			break;
+		}
+
+		//printf("|%s|\n",filename);
+
+		fp = fopen(filename, "rb");
+		if (fp == NULL){
+			perror("Erro ao ler o arquivo");
+			exit(1);
+		}
+
+		send_file(fp, client_socket);
+
+		memset(filename, 0, FILENAME_SIZE);
 	}
 	printf("\n----- Conexão encerrada -----\n");
 
@@ -40,7 +68,7 @@ int main(){
 	// INADDR_ANY: Para todas as interfaces de rede disponíveis
 	// PORT: 1337
 	address.sin_family = AF_INET; 
-	address.sin_addr.s_addr = htonl(INADDR_ANY); 
+	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK); 
 	address.sin_port = htons(PORT); 
 
 	// Vincula o socket ao localhost e a porta 1337
