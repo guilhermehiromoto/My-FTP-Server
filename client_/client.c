@@ -6,24 +6,16 @@
 #include <string.h>
 
 #define PORT 7331
-#define PACKET_SIZE 10
+#define PACKET_SIZE 1024
 
 typedef struct sockaddr_in socket_address;
-
-int write_file(FILE* fp , char* buffer_in, int pkt_size){
-  int i = 0;
-  while(buffer_in[i] != '\0'){
-    printf("%c", buffer_in[i]);
-    i++;
-  }
-  printf("\n");
-    fwrite(buffer_in,1,pkt_size-1,fp);
-}
 
 int main(){
     socket_address address;
     int client_fd, addrlen = sizeof(address);
     int counter = 0;
+    char filename[30];
+    char buffer_in[PACKET_SIZE];
     FILE* fp;
 
 
@@ -37,17 +29,17 @@ int main(){
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     address.sin_port = htons(PORT);
 
-    connect(client_fd, (const struct sockaddr *)&address, addrlen);
-    printf("\n----- Conexão Estabelecida -----\n");
-    char filename[30];
-    char buffer_in[PACKET_SIZE];
+    if (!connect(client_fd, (const struct sockaddr *)&address, addrlen)){
+        printf("\n----- Conexão Estabelecida -----\n");
+    }
+
     // Le o input do cliente até serem enviados 0 bytes
     while(1){    // Change
         scanf("%[^\n]%*c", filename);
         fp = fopen(filename, "wb");
 
         write(client_fd , filename, 30);
-        printf("|%s|\n", filename);
+
         if (!strcmp(filename, "sair")){
             printf("\n----- Conexão encerrada -----\n");
             break;
@@ -56,10 +48,12 @@ int main(){
         int pkt_size;
         while(1){
             pkt_size=read(client_fd , buffer_in, PACKET_SIZE);
-            printf("%d - %d>", pkt_size, packet_count++);
+            
             if(pkt_size < 2) break;
 
-            write_file(fp, buffer_in, pkt_size);
+            fwrite(buffer_in,1,pkt_size-1,fp);
+            printf("\n----- Pacote Recebido -----\n");
+
         }
         printf("---------\n");
         fclose(fp);

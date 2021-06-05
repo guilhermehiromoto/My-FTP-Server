@@ -7,7 +7,7 @@
 #include<pthread.h>
 
 #define PORT 7331
-#define PACKET_SIZE 10
+#define PACKET_SIZE 1024
 #define FILENAME_SIZE 30
 
 typedef struct sockaddr_in socket_address;
@@ -17,11 +17,10 @@ void send_file(FILE* fp, int client_socket){
 	memset(buffer, 0, PACKET_SIZE+1);
 
 	while (fgets(buffer, PACKET_SIZE, fp) != NULL){
-		printf("|%s|\n", buffer);
     	write(client_socket , buffer , PACKET_SIZE);
-  }
+  	}
 	write(client_socket , buffer , 1);
-  fclose(fp);
+  	fclose(fp);
 }
 
 void* communation_thread(void *client_sock){
@@ -39,8 +38,6 @@ void* communation_thread(void *client_sock){
 		if(!strcmp(filename, "sair")){
 			break;
 		}
-
-		//printf("|%s|\n",filename);
 
 		fp = fopen(filename, "rb");
 		if (fp == NULL){
