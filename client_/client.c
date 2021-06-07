@@ -13,9 +13,9 @@ typedef struct sockaddr_in socket_address;
 int main(){
     socket_address address;
     int client_fd, addrlen = sizeof(address);
-    int counter = 0;
+    int n_packets;
     char filename[30];
-    char buffer_in[PACKET_SIZE];
+    char buffer_in[PACKET_SIZE+1];
     FILE* fp;
 
 
@@ -44,17 +44,19 @@ int main(){
             printf("\n----- Conexão encerrada -----\n");
             break;
         }
+
+        read(client_fd , &n_packets, sizeof(int));
+        printf("Numero de pacotes a receber: %d\n", n_packets);
+
         int packet_count = 0;
         int pkt_size;
-        while(1){
+        for (int i = 0; i < n_packets; i++){
             pkt_size=read(client_fd , buffer_in, PACKET_SIZE);
-            
-            if(pkt_size < 2) break;
-
-            fwrite(buffer_in,1,pkt_size-1,fp);
-            printf("\n----- Pacote Recebido -----\n");
-
+            fwrite(buffer_in,1,pkt_size,fp);
+            packet_count++;
         }
+        printf("Numero de pacotes: %d\n", packet_count);
+        printf("\n----- Arquivo Recebido -----\n");
         printf("---------\n");
         fclose(fp);
     }

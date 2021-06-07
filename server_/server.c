@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
-#include<pthread.h>
+#include <pthread.h>
 
 #define PORT 7331
 #define PACKET_SIZE 1024
@@ -12,21 +12,29 @@
 
 typedef struct sockaddr_in socket_address;
 
-void send_file(FILE* fp, int client_socket){
-	char buffer[PACKET_SIZE+1];
-	memset(buffer, 0, PACKET_SIZE+1);
+void send_file(FILE* fp, int client_socket, int last_packet_size, int n_packets){
+	char buffer[PACKET_SIZE];
+	memset(buffer, 0, PACKET_SIZE);
 
-	while (fgets(buffer, PACKET_SIZE, fp) != NULL){
+	if (last_packet_size != 0){
+		n_packets--;
+	}
+
+	for(int i = 0 ; i < n_packets; i++){
+    	fread(buffer, 1, PACKET_SIZE, fp);
     	write(client_socket , buffer , PACKET_SIZE);
   	}
-	write(client_socket , buffer , 1);
+
+  	fread(buffer, 1, last_packet_size, fp);
+  	write(client_socket , buffer , last_packet_size);
+
   	fclose(fp);
 }
 
 void* communation_thread(void *client_sock){
 
 	// Voltando o socker descriptor do cliente para inteiro
-    int client_socket = *(int*)client_sock;
+    int client_socket = *(int*)client_sock, file_size, n_packets, last_packet_size;
 	char filename[FILENAME_SIZE];
 	memset(filename, 0, FILENAME_SIZE);
 
@@ -45,7 +53,17 @@ void* communation_thread(void *client_sock){
 			exit(1);
 		}
 
-		send_file(fp, client_socket);
+		fseek(fp, 0, SEEK_END);
+		file_size = ftell(fp);
+		fseek(fp, 0, SEEK_SET);
+
+		last_packet_size = file_size%PACKET_SIZE;
+		printf("Tamanho do Arquivo: %d\n", file_size);
+		n_packets = last_packet_size ? file_size/PACKET_SIZE+1 : file_size/PACKET_SIZE;
+		printf("Numero de pacotes a ser enviado: %d\n", n_packets);
+
+		write(client_socket, &n_packets, sizeof(int));
+		send_file(fp, client_socket, last_packet_size, n_packets);
 
 		memset(filename, 0, FILENAME_SIZE);
 	}
