@@ -4,9 +4,7 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
-
-#define PORT 7331
-#define PACKET_SIZE 1024
+#include "../config.h"
 
 typedef struct sockaddr_in socket_address;
 

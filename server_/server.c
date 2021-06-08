@@ -5,10 +5,7 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <pthread.h>
-
-#define PORT 7331
-#define PACKET_SIZE 1024
-#define FILENAME_SIZE 30
+#include "../config.h"
 
 typedef struct sockaddr_in socket_address;
 
@@ -70,6 +67,7 @@ void* communation_thread(void *client_sock){
 	printf("\n----- Conexão encerrada -----\n");
 
 	close(client_socket);
+	return NULL;
 }
 
 int main(){
