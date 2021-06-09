@@ -6,8 +6,10 @@
 #include <string.h>
 #include "../config.h"
 
+// Socket struct
 typedef struct sockaddr_in socket_address;
 
+// A função lê o arquivo de pacote (1 KB) em pacote e o envia para o servidor
 void send_file(FILE* fp, int client_fd, int last_packet_size, int n_packets){
     char buffer[PACKET_SIZE];
     memset(buffer, 0, PACKET_SIZE);
@@ -41,18 +43,19 @@ int main(){
     client_fd = socket(AF_INET, SOCK_STREAM, 0);
 
     // AF_INET: IPv4
-    // INADDR_ANY: Para todas as interfaces de rede disponíveis
-    // PORT: 1337
+    // INADDR_LOOPBACK: Para a interface de loopback
+    // Para enviar pela internet é preciso trocar o parâmetro de htonl para o ip desejado
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     address.sin_port = htons(PORT);
 
+    // Tenta se conectar com o servidor e checa se a mesma foi bem sucedida
     if (!connect(client_fd, (const struct sockaddr *)&address, addrlen)){
         printf("\n----- Conexão Estabelecida -----\n");
     }
 
-    // Le o input do cliente até serem enviados 0 bytes
-    while(1){    // Change
+    // Interage com o servidor até que o comando exit seja enviado
+    while(1){    
         scanf("%s", comando);
         
         if (!strcmp(comando, "exit")){
@@ -69,6 +72,7 @@ int main(){
         strcat(full_path, path);
         strcat(full_path, filename);
         
+	// Comando get (baixar o arquivo)
         if (!strcmp(comando, "get")) {
 
             write(client_fd, comando, 40);
@@ -92,6 +96,7 @@ int main(){
                 fclose(fp);
 	    }
 
+	// Comando put (fazer upload do arquivo)
         } else if (!strcmp(comando, "put")) {
             fp = fopen(full_path, "rb");
             if (fp == NULL) {

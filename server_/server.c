@@ -7,8 +7,10 @@
 #include <pthread.h>
 #include "../config.h"
 
+// Socket struct
 typedef struct sockaddr_in socket_address;
 
+// A função lê o arquivo de pacote (1 KB) em pacote e o envia para o cliente
 void send_file(FILE* fp, int client_socket, int last_packet_size, int n_packets){
 	char buffer[PACKET_SIZE];
 	memset(buffer, 0, PACKET_SIZE);
@@ -28,7 +30,7 @@ void send_file(FILE* fp, int client_socket, int last_packet_size, int n_packets)
   	fclose(fp);
 }
 
-void* communation_thread(void *client_sock){
+void* communication_thread(void *client_sock){
 
 	// Voltando o socker descriptor do cliente para inteiro
         int client_socket = *(int*)client_sock, file_size, n_packets, last_packet_size;
@@ -41,8 +43,9 @@ void* communation_thread(void *client_sock){
 
 	FILE* fp;
 
-	// Le o input do cliente até serem enviados 0 bytes
+        // Interage com o cliente até que o comando exit seja enviado
 	while(read(client_socket, comando, 10)){
+		// Comando get (baixar o arquivo)
 		if (!strcmp(comando, "get")) {
 			printf("Comando get.\n");
 			read(client_socket, filename, FILENAME_SIZE);
@@ -69,6 +72,7 @@ void* communation_thread(void *client_sock){
 				send_file(fp, client_socket, last_packet_size, n_packets);
 
 			}
+		// Comando put (fazer upload do arquivo)
 		} else if (!strcmp (comando, "put")) {
 			printf("Comando put.\n");
 			read(client_socket, filename, FILENAME_SIZE);
@@ -107,8 +111,7 @@ int main(){
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 
 	// AF_INET: IPv4
-	// INADDR_ANY: Para todas as interfaces de rede disponíveis
-	// PORT: 1337
+        // INADDR_LOOPBACK: Para a interface de loopback
 	address.sin_family = AF_INET;
 	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	address.sin_port = htons(PORT);
@@ -128,8 +131,7 @@ int main(){
 		client_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
 		printf("\n----- Conexão Estabelecida -----\n");
 
-		pthread_create( &thread_id , NULL , communation_thread , (void*) &client_socket);
-		//pthread_join(thread_id , NULL);
+		pthread_create( &thread_id , NULL , communication_thread , (void*) &client_socket);
 	}
 
 	return 0;
