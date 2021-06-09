@@ -8,11 +8,31 @@
 
 typedef struct sockaddr_in socket_address;
 
+void send_file(FILE* fp, int client_fd, int last_packet_size, int n_packets){
+    char buffer[PACKET_SIZE];
+    memset(buffer, 0, PACKET_SIZE);
+
+    if (last_packet_size != 0){
+        n_packets--;
+    }
+
+    for(int i = 0 ; i < n_packets; i++){
+        fread(buffer, 1, PACKET_SIZE, fp);
+        write(client_fd , buffer , PACKET_SIZE);
+    }
+
+    fread(buffer, 1, last_packet_size, fp);
+    write(client_fd , buffer , last_packet_size);
+
+    fclose(fp);
+}
+
 int main(){
     socket_address address;
     int client_fd, addrlen = sizeof(address);
     int n_packets;
     char filename[30];
+    char comando[10];
     char buffer_in[PACKET_SIZE+1];
     FILE* fp;
 
@@ -33,32 +53,67 @@ int main(){
 
     // Le o input do cliente até serem enviados 0 bytes
     while(1){    // Change
-        scanf("%[^\n]%*c", filename);
-        fp = fopen(filename, "wb");
-
-        write(client_fd , filename, 30);
-
-        if (!strcmp(filename, "sair")){
+        scanf("%s", comando);
+        
+        if (!strcmp(comando, "exit")){
+            write(client_fd, comando, 40);
             printf("\n----- Conexão encerrada -----\n");
             break;
         }
 
-        read(client_fd , &n_packets, sizeof(int));
-        printf("Numero de pacotes a receber: %d\n", n_packets);
+        char path[60] = "./client_/files/";
+        char full_path[60] = "";
 
-        int packet_count = 0;
-        int pkt_size;
-        for (int i = 0; i < n_packets; i++){
-            pkt_size=read(client_fd , buffer_in, PACKET_SIZE);
-            fwrite(buffer_in,1,pkt_size,fp);
-            packet_count++;
+        scanf("%[^\n]%*c", filename);
+        
+        strcat(full_path, path);
+        strcat(full_path, filename);
+        
+        if (!strcmp(comando, "get")) {
+            fp = fopen(full_path, "wb");
+
+            write(client_fd, comando, 40);
+            write(client_fd, filename, 40);
+            read(client_fd, &n_packets, sizeof(int));
+            printf("Numero de pacotes a receber: %d\n", n_packets);
+
+            int packet_count = 0;
+            int pkt_size;
+            for (int i = 0; i < n_packets; i++){
+                pkt_size = read(client_fd, buffer_in, PACKET_SIZE);
+                fwrite(buffer_in, 1, pkt_size,fp);
+                packet_count++;
+            }
+            printf("Numero de pacotes: %d\n", packet_count);
+            printf("\n----- Arquivo Recebido -----\n");
+            printf("---------\n");
+            fclose(fp);
+
+        } else if (!strcmp(comando, "put")) {
+            fp = fopen(full_path, "rb");
+            if (fp == NULL) {
+                perror("Erro ao ler o arquivo: ");
+            } else {
+                int file_size, n_packets, last_packet_size;
+                fseek(fp, 0, SEEK_END);
+                file_size = ftell(fp);
+                fseek(fp, 0, SEEK_SET);
+
+                last_packet_size = file_size%PACKET_SIZE;
+                printf("Tamanho do Arquivo: %d\n", file_size);
+                n_packets = last_packet_size ? file_size/PACKET_SIZE+1 : file_size/PACKET_SIZE;
+                printf("Numero de pacotes a ser enviado: %d\n", n_packets);
+
+                write(client_fd, comando, 40);
+                write(client_fd, &n_packets, sizeof(int));
+                send_file(fp, client_fd, last_packet_size, n_packets);
+
+            }
+        } else {
+            printf("Comando inexistente. Digite 'get', 'put' ou 'exit' para encerrar a conexão.\n");
         }
-        printf("Numero de pacotes: %d\n", packet_count);
-        printf("\n----- Arquivo Recebido -----\n");
-        printf("---------\n");
-        fclose(fp);
+        memset(filename, 0, FILENAME_SIZE); 
     }
-
     close(client_fd);
 
     return 0;

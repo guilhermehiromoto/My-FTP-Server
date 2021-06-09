@@ -33,39 +33,66 @@ void* communation_thread(void *client_sock){
 	// Voltando o socker descriptor do cliente para inteiro
     int client_socket = *(int*)client_sock, file_size, n_packets, last_packet_size;
 	char filename[FILENAME_SIZE];
+	char comando[10];
+	char full_path[60] ="";
+	char path[60] = "./server_/files/";
 	memset(filename, 0, FILENAME_SIZE);
 
 	FILE* fp;
 
 	// Le o input do cliente até serem enviados 0 bytes
-	while(read(client_socket , filename, FILENAME_SIZE)){
+	while(read(client_socket, comando, 10)){
+		if (!strcmp(comando, "get")) {
+			printf("Comando get.\n");
+			read(client_socket, filename, FILENAME_SIZE);
 
-		if(!strcmp(filename, "sair")){
-			break;
-		}
+			strcat (full_path, path);
+			strcat (full_path, filename);
 
-		fp = fopen(filename, "rb");
-		if (fp == NULL){
-			perror("Erro ao ler o arquivo");
-			exit(1);
-		}
+			fp = fopen(full_path, "rb");
+			if (fp == NULL){
+				perror("Erro ao ler o arquivo: ");
+			} else {
+				fseek(fp, 0, SEEK_END);
+				file_size = ftell(fp);
+				fseek(fp, 0, SEEK_SET);
 
-		fseek(fp, 0, SEEK_END);
-		file_size = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
+				last_packet_size = file_size%PACKET_SIZE;
+				printf("Tamanho do Arquivo: %d\n", file_size);
+				n_packets = last_packet_size ? file_size/PACKET_SIZE+1 : file_size/PACKET_SIZE;
+				printf("Numero de pacotes a ser enviado: %d\n", n_packets);
 
-		last_packet_size = file_size%PACKET_SIZE;
-		printf("Tamanho do Arquivo: %d\n", file_size);
-		n_packets = last_packet_size ? file_size/PACKET_SIZE+1 : file_size/PACKET_SIZE;
-		printf("Numero de pacotes a ser enviado: %d\n", n_packets);
+				write(client_socket, &n_packets, sizeof(int));
+				send_file(fp, client_socket, last_packet_size, n_packets);
 
-		write(client_socket, &n_packets, sizeof(int));
-		send_file(fp, client_socket, last_packet_size, n_packets);
+			}
+		} else if (!strcmp (comando, "put")) {
+			printf("Comando put.\n");
+			read(client_socket, filename, FILENAME_SIZE);
 
+			strcat (full_path, path);
+			strcat (full_path, filename);
+			fp = fopen (full_path, "wb");
+
+			read(client_socket, &n_packets, sizeof(int));
+            printf("Numero de pacotes a receber: %d\n", n_packets);
+
+            int packet_count = 0;
+            int pkt_size;
+            for (int i = 0; i < n_packets; i++){
+                pkt_size = read(client_socket, buffer_in, PACKET_SIZE);
+                fwrite(buffer_in, 1, pkt_size,fp);
+                packet_count++;
+            }
+            printf("Numero de pacotes: %d\n", packet_count);
+            printf("\n----- Arquivo Recebido -----\n");
+            printf("---------\n");
+            fclose(fp);
+		} else if (!strcmp(filename, "exit")) break;
+		memset(full_path, 0, 60);	
 		memset(filename, 0, FILENAME_SIZE);
 	}
 	printf("\n----- Conexão encerrada -----\n");
-
 	close(client_socket);
 	return NULL;
 }
