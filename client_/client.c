@@ -64,35 +64,38 @@ int main(){
         char path[60] = "./client_/files/";
         char full_path[60] = "";
 
-        scanf("%[^\n]%*c", filename);
+        scanf(" %[^\n]%*c", filename);
         
         strcat(full_path, path);
         strcat(full_path, filename);
         
         if (!strcmp(comando, "get")) {
-            fp = fopen(full_path, "wb");
 
             write(client_fd, comando, 40);
             write(client_fd, filename, 40);
             read(client_fd, &n_packets, sizeof(int));
-            printf("Numero de pacotes a receber: %d\n", n_packets);
+	    if(n_packets == -1)
+		printf("\n----- Arquivo não encontrado -----\n\n");
+	    else {
+                fp = fopen(full_path, "wb");
+                printf("Numero de pacotes a receber: %d\n", n_packets);
 
-            int packet_count = 0;
-            int pkt_size;
-            for (int i = 0; i < n_packets; i++){
-                pkt_size = read(client_fd, buffer_in, PACKET_SIZE);
-                fwrite(buffer_in, 1, pkt_size,fp);
-                packet_count++;
-            }
-            printf("Numero de pacotes: %d\n", packet_count);
-            printf("\n----- Arquivo Recebido -----\n");
-            printf("---------\n");
-            fclose(fp);
+                int packet_count = 0;
+                int pkt_size;
+                for (int i = 0; i < n_packets; i++){
+                    pkt_size = read(client_fd, buffer_in, PACKET_SIZE);
+                    fwrite(buffer_in, 1, pkt_size,fp);
+                    packet_count++;
+                }
+                printf("Numero de pacotes: %d\n", packet_count);
+                printf("\n----- Arquivo Recebido -----\n\n");
+                fclose(fp);
+	    }
 
         } else if (!strcmp(comando, "put")) {
             fp = fopen(full_path, "rb");
             if (fp == NULL) {
-                perror("Erro ao ler o arquivo: ");
+		printf("\n----- Arquivo não encontrado -----\n\n");
             } else {
                 int file_size, n_packets, last_packet_size;
                 fseek(fp, 0, SEEK_END);
