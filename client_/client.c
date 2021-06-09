@@ -6,8 +6,10 @@
 #include <string.h>
 #include "../config.h"
 
+// Socket struct
 typedef struct sockaddr_in socket_address;
 
+// A função lê o arquivo de pacote (1 KB) em pacote e o envia para o servidor
 void send_file(FILE* fp, int client_fd, int last_packet_size, int n_packets){
     char buffer[PACKET_SIZE];
     memset(buffer, 0, PACKET_SIZE);
@@ -41,18 +43,19 @@ int main(){
     client_fd = socket(AF_INET, SOCK_STREAM, 0);
 
     // AF_INET: IPv4
-    // INADDR_ANY: Para todas as interfaces de rede disponíveis
-    // PORT: 1337
+    // INADDR_LOOPBACK: Para a interface de loopback
+    // Para enviar pela internet é preciso trocar o parâmetro de htonl para o ip desejado
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     address.sin_port = htons(PORT);
 
+    // Tenta se conectar com o servidor e checa se a mesma foi bem sucedida
     if (!connect(client_fd, (const struct sockaddr *)&address, addrlen)){
         printf("\n----- Conexão Estabelecida -----\n");
     }
 
-    // Le o input do cliente até serem enviados 0 bytes
-    while(1){    // Change
+    // Interage com o servidor até que o comando exit seja enviado
+    while(1){    
         scanf("%s", comando);
         
         if (!strcmp(comando, "exit")){
@@ -64,35 +67,40 @@ int main(){
         char path[60] = "./client_/files/";
         char full_path[60] = "";
 
-        scanf("%[^\n]%*c", filename);
+        scanf(" %[^\n]%*c", filename);
         
         strcat(full_path, path);
         strcat(full_path, filename);
         
+	// Comando get (baixar o arquivo)
         if (!strcmp(comando, "get")) {
-            fp = fopen(full_path, "wb");
 
             write(client_fd, comando, 40);
             write(client_fd, filename, 40);
             read(client_fd, &n_packets, sizeof(int));
-            printf("Numero de pacotes a receber: %d\n", n_packets);
+	    if(n_packets == -1)
+		printf("\n----- Arquivo não encontrado -----\n\n");
+	    else {
+                fp = fopen(full_path, "wb");
+                printf("Numero de pacotes a receber: %d\n", n_packets);
 
-            int packet_count = 0;
-            int pkt_size;
-            for (int i = 0; i < n_packets; i++){
-                pkt_size = read(client_fd, buffer_in, PACKET_SIZE);
-                fwrite(buffer_in, 1, pkt_size,fp);
-                packet_count++;
-            }
-            printf("Numero de pacotes: %d\n", packet_count);
-            printf("\n----- Arquivo Recebido -----\n");
-            printf("---------\n");
-            fclose(fp);
+                int packet_count = 0;
+                int pkt_size;
+                for (int i = 0; i < n_packets; i++){
+                    pkt_size = read(client_fd, buffer_in, PACKET_SIZE);
+                    fwrite(buffer_in, 1, pkt_size,fp);
+                    packet_count++;
+                }
+                printf("Numero de pacotes: %d\n", packet_count);
+                printf("\n----- Arquivo Recebido -----\n\n");
+                fclose(fp);
+	    }
 
+	// Comando put (fazer upload do arquivo)
         } else if (!strcmp(comando, "put")) {
             fp = fopen(full_path, "rb");
             if (fp == NULL) {
-                perror("Erro ao ler o arquivo: ");
+		printf("\n----- Arquivo não encontrado -----\n\n");
             } else {
                 int file_size, n_packets, last_packet_size;
                 fseek(fp, 0, SEEK_END);
