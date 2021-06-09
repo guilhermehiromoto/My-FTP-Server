@@ -16,8 +16,14 @@ client: $(CLIENT_SRC)
 runServer: $(SERVER_BINARY)
 	$(SERVER_BINARY)
 
+debugServer: $(SERVER_BINARY)
+	valgrind $(SERVER_BINARY)
+
 runClient: $(CLIENT_BINARY)
 	$(CLIENT_BINARY)
+
+debugClient: $(CLIENT_BINARY)
+	valgrind $(CLIENT_BINARY)
 
 clean:
 	rm $(SERVER_BINARY) $(CLIENT_BINARY)
